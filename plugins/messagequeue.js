@@ -5,7 +5,30 @@ const fp = require('fastify-plugin')
 module.exports = fp(async function (fastify, opts) {
   fastify.decorate('sendMessage', function (message) {
     const body = message.toString()
-    if (process.env.ORDER_QUEUE_USERNAME && process.env.ORDER_QUEUE_PASSWORD) {
+    // Check for Azure Service Bus connection string
+    if (process.env.AZURE_SERVICEBUS_CONNECTION_STRING) {
+      const { ServiceBusClient } = require("@azure/service-bus");
+
+      console.log(`sending message ${body} to ${process.env.ORDER_QUEUE_NAME} using Azure Service Bus connection string`);
+
+      const queueName = process.env.ORDER_QUEUE_NAME;
+
+      async function sendMessage() {
+        // Create a Service Bus client using the connection string
+        const sbClient = new ServiceBusClient(process.env.AZURE_SERVICEBUS_CONNECTION_STRING);
+        const sender = sbClient.createSender(queueName);
+
+        try {
+          await sender.sendMessages({ body: body });
+        } finally {
+          await sender.close();
+          await sbClient.close();
+        }
+      }
+
+      sendMessage().catch(console.error);
+    }
+    else if (process.env.ORDER_QUEUE_USERNAME && process.env.ORDER_QUEUE_PASSWORD) {
       console.log('sending message ${body} to ${process.env.ORDER_QUEUE_NAME} on ${process.env.ORDER_QUEUE_HOSTNAME} using local auth credentials')
       
       const rhea = require('rhea')
