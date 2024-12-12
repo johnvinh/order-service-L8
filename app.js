@@ -1,29 +1,35 @@
-'use strict'
+'use strict';
 
-const path = require('path')
-const AutoLoad = require('@fastify/autoload')
+const path = require('path');
+const fastify = require('fastify')({ logger: true });
+const AutoLoad = require('@fastify/autoload');
 
-module.exports = async function (fastify, opts) {
-// Place here your custom code!
+// Register CORS plugin
+fastify.register(require('@fastify/cors'), {
+  origin: '*',
+});
 
-  fastify.register(require('@fastify/cors'), {
-    origin: '*'
-  })
+// Load all plugins from the `plugins` directory
+fastify.register(AutoLoad, {
+  dir: path.join(__dirname, 'plugins'),
+  options: {},
+});
 
-  // Do not touch the following lines
+// Load all routes from the `routes` directory
+fastify.register(AutoLoad, {
+  dir: path.join(__dirname, 'routes'),
+  options: {},
+});
 
-  // This loads all plugins defined in plugins
-  // those should be support plugins that are reused
-  // through your application
-  fastify.register(AutoLoad, {
-    dir: path.join(__dirname, 'plugins'),
-    options: Object.assign({}, opts)
-  })
+// Start the server
+const start = async () => {
+  try {
+    await fastify.listen({ host: '0.0.0.0', port: 3000 });
+    fastify.log.info(`Server running at http://0.0.0.0:3000`);
+  } catch (err) {
+    fastify.log.error(err);
+    process.exit(1);
+  }
+};
 
-  // This loads all plugins defined in routes
-  // define your routes in one of these
-  fastify.register(AutoLoad, {
-    dir: path.join(__dirname, 'routes'),
-    options: Object.assign({}, opts)
-  })
-}
+start();
